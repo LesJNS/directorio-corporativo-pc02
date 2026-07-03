@@ -1,12 +1,9 @@
 <template>
   <q-page class="q-pa-md">
-    <q-toolbar class="bg-primary text-white rounded-borders shadow-2 q-mb-md">
-      <q-icon name="groups" size="28px" class="q-mr-sm" />
-      <q-toolbar-title class="text-h6">Directorio Corporativo</q-toolbar-title>
-    </q-toolbar>
+    <div class="text-h6 text-weight-medium q-mb-md">Empleados</div>
 
-    <q-card class="shadow-3">
-      <q-card-section>
+    <q-card class="employees-card">
+      <q-card-section class="q-pa-lg">
         <q-table
           flat
           bordered
@@ -21,7 +18,7 @@
         >
           <template v-slot:body-cell-photo="props">
             <q-td :props="props" auto-width>
-              <q-avatar size="40px" class="employee-avatar">
+              <q-avatar size="48px" class="employee-avatar">
                 <img :src="props.row.image" :alt="`${props.row.firstName} ${props.row.lastName}`" />
               </q-avatar>
             </q-td>
@@ -36,6 +33,7 @@
                 color="primary"
                 icon="visibility"
                 aria-label="Ver detalle"
+                class="detail-btn"
                 @click="onViewDetail(props.row)"
               >
                 <q-tooltip>Ver detalle</q-tooltip>
@@ -130,8 +128,45 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+.employees-card {
+  border-radius: $app-card-radius;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
 .employee-avatar {
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 2px $app-avatar-ring;
+  transition: transform 0.2s ease;
+}
+
+.detail-btn {
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.detail-btn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(26, 35, 126, 0.35);
+}
+
+:deep(thead tr th) {
+  background-color: rgba(26, 35, 126, 0.04);
+  font-weight: 600;
+}
+
+:deep(tbody tr) {
+  transition: background-color 0.15s ease;
+}
+
+:deep(tbody tr:nth-child(even)) {
+  background-color: rgba(26, 35, 126, 0.015);
+}
+
+:deep(tbody tr:hover) {
+  background-color: rgba(26, 35, 126, 0.05);
+}
+
+:deep(tbody tr:hover .employee-avatar) {
+  transform: scale(1.08);
 }
 </style>
