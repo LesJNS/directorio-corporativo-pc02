@@ -14,17 +14,15 @@ export const useUsersStore = defineStore('users', {
   }),
 
   actions: {
-    async fetchUsers({ page = 1, rowsPerPage = 10, search = '' } = {}) {
+    async fetchUsers({ page = 1, rowsPerPage = 10 } = {}) {
       this.loading = true
       this.error = null
 
       const limit = rowsPerPage
       const skip = (page - 1) * rowsPerPage
-      const endpoint = search ? '/users/search' : '/users'
-      const params = search ? { q: search, limit, skip } : { limit, skip }
 
       try {
-        const { data } = await api.get(endpoint, { params })
+        const { data } = await api.get('/users', { params: { limit, skip } })
         this.users = data.users
         this.total = data.total
       } catch (err) {

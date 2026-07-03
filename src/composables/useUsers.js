@@ -12,8 +12,8 @@ export function useUsers() {
   const store = useUsersStore()
   const { users, total, loading, error, selectedUser } = storeToRefs(store)
 
-  function fetchUsers({ page = 1, rowsPerPage = 10, search = '' } = {}) {
-    return store.fetchUsers({ page, rowsPerPage, search })
+  function fetchUsers({ page = 1, rowsPerPage = 10 } = {}) {
+    return store.fetchUsers({ page, rowsPerPage })
   }
 
   function selectUser(user) {
