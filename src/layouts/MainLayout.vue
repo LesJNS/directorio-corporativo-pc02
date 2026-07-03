@@ -20,10 +20,12 @@
           <q-item-section>Directorio</q-item-section>
         </q-item>
 
-        <!--
-          Espacio reservado para futuras secciones (dashboard, comparación, etc.):
-          agrega aquí nuevos <q-item> siguiendo el mismo patrón.
-        -->
+        <q-item v-ripple clickable exact to="/dashboard" active-class="text-primary">
+          <q-item-section avatar>
+            <q-icon name="dashboard" />
+          </q-item-section>
+          <q-item-section>Dashboard</q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
