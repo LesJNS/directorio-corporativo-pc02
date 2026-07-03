@@ -1,50 +1,75 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="text-h5 q-mb-md">Directorio Corporativo</div>
+    <q-toolbar class="bg-primary text-white rounded-borders shadow-2 q-mb-md">
+      <q-icon name="groups" size="28px" class="q-mr-sm" />
+      <q-toolbar-title class="text-h6">Directorio Corporativo</q-toolbar-title>
+    </q-toolbar>
 
-    <q-table
-      flat
-      bordered
-      title="Empleados"
-      :rows="users"
-      :columns="columns"
-      row-key="id"
-      v-model:pagination="pagination"
-      :loading="loading"
-      :rows-per-page-options="[10, 20, 50]"
-      @request="onRequest"
-    >
-      <template v-slot:body-cell-photo="props">
-        <q-td :props="props" auto-width>
-          <q-avatar size="40px">
-            <img :src="props.row.image" :alt="`${props.row.firstName} ${props.row.lastName}`" />
+    <q-card class="shadow-3">
+      <q-card-section>
+        <q-table
+          flat
+          bordered
+          title="Empleados"
+          :rows="users"
+          :columns="columns"
+          row-key="id"
+          v-model:pagination="pagination"
+          :loading="loading"
+          :rows-per-page-options="[10, 20, 50]"
+          @request="onRequest"
+        >
+          <template v-slot:body-cell-photo="props">
+            <q-td :props="props" auto-width>
+              <q-avatar size="40px" class="employee-avatar">
+                <img :src="props.row.image" :alt="`${props.row.firstName} ${props.row.lastName}`" />
+              </q-avatar>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props" auto-width>
+              <q-btn
+                flat
+                round
+                dense
+                color="primary"
+                icon="visibility"
+                aria-label="Ver detalle"
+                @click="onViewDetail(props.row)"
+              >
+                <q-tooltip>Ver detalle</q-tooltip>
+              </q-btn>
+            </q-td>
+          </template>
+
+          <template v-slot:no-data>
+            <div class="full-width row flex-center text-grey q-gutter-sm q-pa-lg">
+              <q-icon size="2em" name="sentiment_dissatisfied" />
+              <span>No se encontraron empleados.</span>
+            </div>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
+
+    <q-dialog v-model="isDetailOpen">
+      <q-card style="min-width: 280px">
+        <!-- TODO: Mattias reemplaza este contenido con el detalle completo (Pregunta 3) -->
+        <q-card-section class="column items-center q-gutter-sm q-pt-lg">
+          <q-avatar size="80px" class="employee-avatar">
+            <img :src="selectedUser?.image" :alt="selectedUser?.firstName" />
           </q-avatar>
-        </q-td>
-      </template>
+          <div class="text-h6 text-center">
+            {{ selectedUser?.firstName }} {{ selectedUser?.lastName }}
+          </div>
+        </q-card-section>
 
-      <template v-slot:body-cell-actions="props">
-        <q-td :props="props" auto-width>
-          <q-btn
-            flat
-            round
-            dense
-            color="primary"
-            icon="visibility"
-            aria-label="Ver detalle"
-            @click="onViewDetail(props.row)"
-          >
-            <q-tooltip>Ver detalle</q-tooltip>
-          </q-btn>
-        </q-td>
-      </template>
-
-      <template v-slot:no-data>
-        <div class="full-width row flex-center text-grey q-gutter-sm q-pa-lg">
-          <q-icon size="2em" name="sentiment_dissatisfied" />
-          <span>No se encontraron empleados.</span>
-        </div>
-      </template>
-    </q-table>
+        <q-card-actions align="right">
+          <q-btn v-close-popup flat label="Cerrar" color="primary" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -55,7 +80,9 @@ import { useUsers } from '@/composables/useUsers'
 // `selectedUser` queda disponible en el store para que Pregunta 3
 // (QDialog/QDrawer de detalle) lo consuma con este mismo composable,
 // sin tener que tocar esta tabla.
-const { users, total, loading, fetchUsers, selectUser } = useUsers()
+const { users, total, loading, selectedUser, fetchUsers, selectUser } = useUsers()
+
+const isDetailOpen = ref(false)
 
 const pagination = ref({
   page: 1,
@@ -94,9 +121,17 @@ function onRequest({ pagination: requestedPagination }) {
 
 function onViewDetail(user) {
   selectUser(user)
+  isDetailOpen.value = true
 }
 
 onMounted(() => {
   loadPage(pagination.value)
 })
 </script>
+
+<style scoped lang="scss">
+.employee-avatar {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+</style>
