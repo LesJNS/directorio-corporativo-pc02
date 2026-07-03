@@ -16,21 +16,6 @@
           :rows-per-page-options="[10, 20, 50]"
           @request="onRequest"
         >
-          <template v-slot:top-right>
-            <q-input
-              v-model="searchQuery"
-              dense
-              outlined
-              debounce="400"
-              clearable
-              placeholder="Buscar por nombre o apellido..."
-              class="search-input"
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </template>
           <template v-slot:body-cell-photo="props">
             <q-td :props="props" auto-width>
               <q-avatar size="48px" class="employee-avatar">
@@ -59,10 +44,7 @@
           <template v-slot:no-data>
             <div class="full-width row flex-center text-grey q-gutter-sm q-pa-lg">
               <q-icon size="2em" name="sentiment_dissatisfied" />
-              <span v-if="searchQuery">
-                No se encontraron empleados para "{{ searchQuery }}".
-              </span>
-              <span v-else>No se encontraron empleados.</span>
+              <span>No se encontraron empleados.</span>
             </div>
           </template>
         </q-table>
@@ -90,7 +72,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useUsers } from '@/composables/useUsers'
 
 // `selectedUser` queda disponible en el store para que Pregunta 3
@@ -99,7 +81,6 @@ import { useUsers } from '@/composables/useUsers'
 const { users, total, loading, selectedUser, fetchUsers, selectUser } = useUsers()
 
 const isDetailOpen = ref(false)
-const searchQuery = ref('')
 
 const pagination = ref({
   page: 1,
@@ -126,7 +107,7 @@ const columns = [
 ]
 
 async function loadPage({ page, rowsPerPage }) {
-  await fetchUsers({ page, rowsPerPage, search: searchQuery.value })
+  await fetchUsers({ page, rowsPerPage })
   pagination.value.page = page
   pagination.value.rowsPerPage = rowsPerPage
   pagination.value.rowsNumber = total.value
@@ -141,10 +122,6 @@ function onViewDetail(user) {
   isDetailOpen.value = true
 }
 
-watch(searchQuery, () => {
-  loadPage({ page: 1, rowsPerPage: pagination.value.rowsPerPage })
-})
-
 onMounted(() => {
   loadPage(pagination.value)
 })
@@ -154,10 +131,6 @@ onMounted(() => {
 .employees-card {
   border-radius: $app-card-radius;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-.search-input {
-  width: 280px;
 }
 
 .employee-avatar {
