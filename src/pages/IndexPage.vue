@@ -69,21 +69,147 @@
       </q-card-section>
     </q-card>
 
-    <q-dialog v-model="isDetailOpen">
-      <q-card style="min-width: 280px">
-        <!-- TODO: Mattias reemplaza este contenido con el detalle completo (Pregunta 3) -->
-        <q-card-section class="column items-center q-gutter-sm q-pt-lg">
-          <q-avatar size="80px" class="employee-avatar">
-            <img :src="selectedUser?.image" :alt="selectedUser?.firstName" />
-          </q-avatar>
-          <div class="text-h6 text-center">
-            {{ selectedUser?.firstName }} {{ selectedUser?.lastName }}
+    <q-dialog v-model="isDetailOpen" maximized>
+      <q-card>
+        <q-card-section class="row items-center justify-between">
+          <div class="row items-center q-gutter-md">
+            <q-avatar size="70px" class="employee-avatar">
+              <img :src="selectedUser?.image" :alt="selectedUser?.firstName" />
+            </q-avatar>
+
+            <div>
+              <div class="text-h6">{{ selectedUser?.firstName }} {{ selectedUser?.lastName }}</div>
+              <div class="text-grey-7">
+                {{ selectedUser?.company?.title }} - {{ selectedUser?.company?.name }}
+              </div>
+            </div>
           </div>
+
+          <q-btn v-close-popup flat round dense icon="close" />
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn v-close-popup flat label="Cerrar" color="primary" />
-        </q-card-actions>
+        <q-separator />
+
+        <q-tabs
+          v-model="detailTab"
+          dense
+          active-color="primary"
+          indicator-color="primary"
+          align="left"
+        >
+          <q-tab name="info" label="Información" icon="person" />
+          <q-tab name="compras" label="Compras" icon="shopping_cart" />
+        </q-tabs>
+
+        <q-separator />
+
+        <q-tab-panels v-model="detailTab" animated>
+          <q-tab-panel name="info">
+            <div class="text-subtitle1 text-weight-medium q-mb-md">Detalle del colaborador</div>
+
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-md-4">
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="text-weight-medium">Datos personales</div>
+                    <div>Edad: {{ selectedUser?.age }}</div>
+                    <div>Género: {{ selectedUser?.gender }}</div>
+                    <div>Email: {{ selectedUser?.email }}</div>
+                    <div>Teléfono: {{ selectedUser?.phone }}</div>
+                  </q-card-section>
+                </q-card>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="text-weight-medium">Información laboral</div>
+                    <div>Empresa: {{ selectedUser?.company?.name }}</div>
+                    <div>Cargo: {{ selectedUser?.company?.title }}</div>
+                    <div>Departamento: {{ selectedUser?.company?.department }}</div>
+                  </q-card-section>
+                </q-card>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="text-weight-medium">Dirección</div>
+                    <div>Ciudad: {{ selectedUser?.address?.city }}</div>
+                    <div>Estado: {{ selectedUser?.address?.state }}</div>
+                    <div>País: {{ selectedUser?.address?.country }}</div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </div>
+          </q-tab-panel>
+
+          <q-tab-panel name="compras">
+            <div class="text-subtitle1 text-weight-medium q-mb-md">
+              Carritos de compra asociados
+            </div>
+
+            <q-inner-loading :showing="loadingCarts">
+              <q-spinner-dots size="40px" color="primary" />
+            </q-inner-loading>
+
+            <q-banner v-if="cartsError" class="bg-red-1 text-red q-mb-md">
+              No se pudieron cargar las compras del colaborador.
+            </q-banner>
+
+            <q-banner
+              v-if="!loadingCarts && !carts.length && !cartsError"
+              class="bg-grey-2 text-grey-8"
+            >
+              Este colaborador no tiene carritos de compra registrados.
+            </q-banner>
+
+            <div v-for="cart in carts" :key="cart.id" class="q-mb-lg">
+              <q-card flat bordered>
+                <q-card-section class="row items-center justify-between">
+                  <div class="text-weight-medium">Carrito #{{ cart.id }}</div>
+                  <q-chip color="primary" text-color="white">
+                    Total: ${{ formatMoney(cart.total) }}
+                  </q-chip>
+                </q-card-section>
+
+                <q-table
+                  flat
+                  bordered
+                  :rows="cart.products"
+                  :columns="purchaseColumns"
+                  row-key="id"
+                  :pagination="{ rowsPerPage: 0 }"
+                  hide-pagination
+                >
+                  <template v-slot:body-cell-thumbnail="props">
+                    <q-td :props="props">
+                      <q-img
+                        :src="props.row.thumbnail"
+                        :alt="props.row.title"
+                        width="54px"
+                        height="54px"
+                        fit="contain"
+                      />
+                    </q-td>
+                  </template>
+
+                  <template v-slot:body-cell-price="props">
+                    <q-td :props="props"> ${{ formatMoney(props.row.price) }} </q-td>
+                  </template>
+
+                  <template v-slot:body-cell-total="props">
+                    <q-td :props="props"> ${{ formatMoney(props.row.total) }} </q-td>
+                  </template>
+                </q-table>
+
+                <q-card-section class="row justify-end">
+                  <div class="text-h6">Total general: ${{ formatMoney(cart.total) }}</div>
+                </q-card-section>
+              </q-card>
+            </div>
+          </q-tab-panel>
+        </q-tab-panels>
       </q-card>
     </q-dialog>
   </q-page>
@@ -92,6 +218,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useUsers } from '@/composables/useUsers'
+import { useUserCarts } from '@/composables/useUserCarts'
 
 // `selectedUser` queda disponible en el store para que Pregunta 3
 // (QDialog/QDrawer de detalle) lo consuma con este mismo composable,
@@ -106,6 +233,10 @@ const pagination = ref({
   rowsPerPage: 10,
   rowsNumber: 0,
 })
+
+const detailTab = ref('info')
+
+const { carts, loadingCarts, cartsError, fetchUserCarts } = useUserCarts()
 
 const columns = [
   { name: 'photo', label: 'Foto', field: 'image', align: 'center' },
@@ -125,6 +256,14 @@ const columns = [
   { name: 'actions', label: 'Detalle', field: 'actions', align: 'center' },
 ]
 
+const purchaseColumns = [
+  { name: 'thumbnail', label: 'Imagen', field: 'thumbnail', align: 'center' },
+  { name: 'title', label: 'Producto', field: 'title', align: 'left' },
+  { name: 'quantity', label: 'Cantidad', field: 'quantity', align: 'center' },
+  { name: 'price', label: 'Precio unitario', field: 'price', align: 'right' },
+  { name: 'total', label: 'Subtotal', field: 'total', align: 'right' },
+]
+
 async function loadPage({ page, rowsPerPage }) {
   await fetchUsers({ page, rowsPerPage, search: searchQuery.value })
   pagination.value.page = page
@@ -136,9 +275,15 @@ function onRequest({ pagination: requestedPagination }) {
   loadPage(requestedPagination)
 }
 
-function onViewDetail(user) {
+async function onViewDetail(user) {
   selectUser(user)
+  detailTab.value = 'info'
   isDetailOpen.value = true
+  await fetchUserCarts(user.id)
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toFixed(2)
 }
 
 watch(searchQuery, () => {
