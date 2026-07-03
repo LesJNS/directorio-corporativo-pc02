@@ -60,7 +60,12 @@
             </q-avatar>
 
             <div>
-              <div class="text-h6">{{ selectedUser?.firstName }} {{ selectedUser?.lastName }}</div>
+              <div class="row items-center q-gutter-sm">
+                <div class="text-h6">{{ selectedUser?.firstName }} {{ selectedUser?.lastName }}</div>
+                <q-chip v-if="userDetail?.role" dense color="primary" text-color="white" class="text-capitalize">
+                  {{ userDetail.role }}
+                </q-chip>
+              </div>
               <div class="text-grey-7">
                 {{ selectedUser?.company?.title }} - {{ selectedUser?.company?.name }}
               </div>
@@ -101,7 +106,10 @@
               <div class="col-12 col-md-4">
                 <q-card flat bordered class="detail-section-card">
                   <q-card-section class="column items-center">
-                    <div class="text-weight-medium q-mb-sm">Imagen</div>
+                    <div class="section-title q-mb-sm">
+                      <q-icon name="image" color="primary" />
+                      <span>Imagen</span>
+                    </div>
                     <q-avatar size="110px" class="employee-avatar">
                       <img :src="userDetail?.image" :alt="userDetail?.firstName" />
                     </q-avatar>
@@ -116,12 +124,15 @@
               <div class="col-12 col-md-4">
                 <q-card flat bordered class="detail-section-card">
                   <q-card-section>
-                    <div class="text-weight-medium">Datos personales</div>
+                    <div class="section-title">
+                      <q-icon name="person" color="primary" />
+                      <span>Datos personales</span>
+                    </div>
                     <div>Edad: {{ userDetail?.age }}</div>
                     <div>Género: {{ userDetail?.gender }}</div>
                     <div>Email: {{ userDetail?.email }}</div>
                     <div>Teléfono: {{ userDetail?.phone }}</div>
-                    <div>Fecha de nacimiento: {{ userDetail?.birthDate }}</div>
+                    <div>Fecha de nacimiento: {{ formatDate(userDetail?.birthDate) }}</div>
                   </q-card-section>
                 </q-card>
               </div>
@@ -129,7 +140,10 @@
               <div class="col-12 col-md-4">
                 <q-card flat bordered class="detail-section-card">
                   <q-card-section>
-                    <div class="text-weight-medium">Información laboral</div>
+                    <div class="section-title">
+                      <q-icon name="work" color="primary" />
+                      <span>Información laboral</span>
+                    </div>
                     <div>Empresa: {{ userDetail?.company?.name }}</div>
                     <div>Cargo: {{ userDetail?.company?.title }}</div>
                     <div>Departamento: {{ userDetail?.company?.department }}</div>
@@ -140,7 +154,10 @@
               <div class="col-12 col-md-4">
                 <q-card flat bordered class="detail-section-card">
                   <q-card-section>
-                    <div class="text-weight-medium">Dirección</div>
+                    <div class="section-title">
+                      <q-icon name="home" color="primary" />
+                      <span>Dirección</span>
+                    </div>
                     <div>{{ userDetail?.address?.address }}</div>
                     <div>Ciudad: {{ userDetail?.address?.city }}</div>
                     <div>Estado: {{ userDetail?.address?.state }}</div>
@@ -153,7 +170,10 @@
               <div class="col-12 col-md-4">
                 <q-card flat bordered class="detail-section-card">
                   <q-card-section>
-                    <div class="text-weight-medium">Universidad</div>
+                    <div class="section-title">
+                      <q-icon name="school" color="primary" />
+                      <span>Universidad</span>
+                    </div>
                     <div>{{ userDetail?.university }}</div>
                   </q-card-section>
                 </q-card>
@@ -162,9 +182,12 @@
               <div class="col-12 col-md-4">
                 <q-card flat bordered class="detail-section-card">
                   <q-card-section>
-                    <div class="text-weight-medium">Banco</div>
+                    <div class="section-title">
+                      <q-icon name="account_balance" color="primary" />
+                      <span>Banco</span>
+                    </div>
                     <div>Tipo de tarjeta: {{ userDetail?.bank?.cardType }}</div>
-                    <div>Número de tarjeta: {{ userDetail?.bank?.cardNumber }}</div>
+                    <div>Número de tarjeta: {{ maskCardNumber(userDetail?.bank?.cardNumber) }}</div>
                     <div>Vencimiento: {{ userDetail?.bank?.cardExpire }}</div>
                     <div>Moneda: {{ userDetail?.bank?.currency }}</div>
                     <div>IBAN: {{ userDetail?.bank?.iban }}</div>
@@ -175,7 +198,10 @@
               <div class="col-12 col-md-4">
                 <q-card flat bordered class="detail-section-card">
                   <q-card-section>
-                    <div class="text-weight-medium">Información física</div>
+                    <div class="section-title">
+                      <q-icon name="fitness_center" color="primary" />
+                      <span>Información física</span>
+                    </div>
                     <div>Altura: {{ userDetail?.height }} cm</div>
                     <div>Peso: {{ userDetail?.weight }} kg</div>
                     <div>Grupo sanguíneo: {{ userDetail?.bloodGroup }}</div>
@@ -188,7 +214,10 @@
               <div class="col-12 col-md-4">
                 <q-card flat bordered class="detail-section-card">
                   <q-card-section>
-                    <div class="text-weight-medium">Criptomonedas</div>
+                    <div class="section-title">
+                      <q-icon name="currency_bitcoin" color="primary" />
+                      <span>Criptomonedas</span>
+                    </div>
                     <div>Moneda: {{ userDetail?.crypto?.coin }}</div>
                     <div>Wallet: {{ userDetail?.crypto?.wallet }}</div>
                     <div>Red: {{ userDetail?.crypto?.network }}</div>
@@ -343,6 +372,20 @@ function formatMoney(value) {
   return Number(value || 0).toFixed(2)
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return dateStr
+  return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function maskCardNumber(cardNumber) {
+  if (!cardNumber) return ''
+  const digits = cardNumber.replace(/\s+/g, '')
+  const lastFour = digits.slice(-4)
+  return `**** **** **** ${lastFour}`
+}
+
 onMounted(() => {
   loadPage(pagination.value)
 })
@@ -362,6 +405,14 @@ onMounted(() => {
 .detail-section-card {
   height: 100%;
   word-break: break-word;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  margin-bottom: 4px;
 }
 
 .detail-btn {
