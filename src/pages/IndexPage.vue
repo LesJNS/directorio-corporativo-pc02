@@ -1,21 +1,67 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="text-h6 text-weight-medium q-mb-md">Empleados</div>
+    <!-- Título + botón comparar -->
+    <div class="row items-center justify-between q-mb-md">
+      <div class="text-h6 text-weight-medium">Empleados</div>
+      <UserComparison :users="allUsers" />
+    </div>
 
+    <!-- Panel de filtros (P7) -->
+    <UserFilters
+      v-model:filter-gender="filterGender"
+      v-model:filter-age="filterAge"
+      v-model:filter-company="filterCompany"
+      v-model:filter-city="filterCity"
+      v-model:filter-country="filterCountry"
+      :age-min="ageMin"
+      :age-max="ageMax"
+      :companies="companies"
+      :cities="cities"
+      :countries="countries"
+      :filters-active="filtersActive"
+      :filtered-count="filteredUsers.length"
+      :loading-all="loadingAll"
+      @clear="clearFilters"
+    />
+
+    <!-- Tabla principal -->
     <q-card class="employees-card">
       <q-card-section class="q-pa-lg">
         <q-table
           flat
           bordered
           title="Empleados"
-          :rows="users"
+          :rows="activeRows"
           :columns="columns"
           row-key="id"
           v-model:pagination="pagination"
-          :loading="loading"
+          :loading="tableLoading"
           :rows-per-page-options="[10, 20, 50]"
-          @request="onRequest"
+          v-bind="serverSideProps"
         >
+          <!-- Buscador (P2) — deshabilitado cuando hay filtros activos -->
+          <template v-slot:top-right>
+            <q-input
+              v-model="searchQuery"
+              dense
+              outlined
+              debounce="400"
+              clearable
+              :disable="filtersActive"
+              placeholder="Buscar por nombre o apellido..."
+              class="search-input"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" />
+              </template>
+              <template v-if="filtersActive" v-slot:append>
+                <q-icon name="filter_alt" color="primary" size="18px">
+                  <q-tooltip>Desactiva los filtros para usar la búsqueda</q-tooltip>
+                </q-icon>
+              </template>
+            </q-input>
+          </template>
+
           <template v-slot:body-cell-photo="props">
             <q-td :props="props" auto-width>
               <q-avatar size="48px" class="employee-avatar">
@@ -44,13 +90,20 @@
           <template v-slot:no-data>
             <div class="full-width row flex-center text-grey q-gutter-sm q-pa-lg">
               <q-icon size="2em" name="sentiment_dissatisfied" />
-              <span>No se encontraron empleados.</span>
+              <span v-if="filtersActive">
+                No hay empleados que coincidan con los filtros aplicados.
+              </span>
+              <span v-else-if="searchQuery">
+                No se encontraron empleados para "{{ searchQuery }}".
+              </span>
+              <span v-else>No se encontraron empleados.</span>
             </div>
           </template>
         </q-table>
       </q-card-section>
     </q-card>
 
+    <!-- Diálogo de detalle (P3 + P4) -->
     <q-dialog v-model="isDetailOpen" maximized>
       <q-card>
         <q-card-section class="row items-center justify-between">
@@ -299,17 +352,50 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useUsers } from '@/composables/useUsers'
 import { useUserCarts } from '@/composables/useUserCarts'
 import { useUserDetail } from '@/composables/useUserDetail'
+import { useUserFilters } from '@/composables/useUserFilters'
+import UserFilters from '@/components/UserFilters.vue'
+import UserComparison from '@/components/UserComparison.vue'
 
-// `selectedUser` queda disponible en el store para que Pregunta 3
-// (QDialog/QDrawer de detalle) lo consuma con este mismo composable,
-// sin tener que tocar esta tabla.
-const { users, total, loading, selectedUser, fetchUsers, selectUser } = useUsers()
+// --- Datos del store ---
+const {
+  users,
+  total,
+  loading,
+  selectedUser,
+  allUsers,
+  loadingAll,
+  fetchUsers,
+  fetchAllUsers,
+  selectUser,
+} = useUsers()
 
+// --- Búsqueda (P2) ---
+const searchQuery = ref('')
+
+// --- Filtros (P7) ---
+const {
+  filterGender,
+  filterAge,
+  filterCompany,
+  filterCity,
+  filterCountry,
+  ageMin,
+  ageMax,
+  companies,
+  cities,
+  countries,
+  filtersActive,
+  filteredUsers,
+  clearFilters,
+} = useUserFilters(allUsers)
+
+// --- Estado UI ---
 const isDetailOpen = ref(false)
+const detailTab = ref('info')
 
 const pagination = ref({
   page: 1,
@@ -317,12 +403,40 @@ const pagination = ref({
   rowsNumber: 0,
 })
 
-const detailTab = ref('info')
-
+// --- Detalle y compras (P3 / P4) ---
 const { carts, loadingCarts, cartsError, fetchUserCarts } = useUserCarts()
 const { userDetail, loadingDetail, detailError, fetchUserDetail, clearUserDetail } =
   useUserDetail()
 
+// --- Lógica de tabla: server-side vs client-side ---
+// Cuando los filtros están activos: muestra filteredUsers (modo client-side).
+// Cuando no: muestra users paginados desde la API (modo server-side).
+const activeRows = computed(() => (filtersActive.value ? filteredUsers.value : users.value))
+const tableLoading = computed(() => (filtersActive.value ? loadingAll.value : loading.value))
+
+// v-bind dinámico: agrega @request solo en modo server-side
+const serverSideProps = computed(() =>
+  filtersActive.value ? {} : { onRequest },
+)
+
+// Al cambiar el resultado filtrado, volver a página 1
+watch(filteredUsers, () => {
+  if (filtersActive.value) pagination.value.page = 1
+})
+
+// Al limpiar filtros, recargar tabla paginada desde la API
+watch(filtersActive, (active, wasActive) => {
+  if (!active && wasActive) {
+    loadPage({ page: 1, rowsPerPage: pagination.value.rowsPerPage })
+  }
+})
+
+// Búsqueda: recargar al cambiar el texto
+watch(searchQuery, () => {
+  loadPage({ page: 1, rowsPerPage: pagination.value.rowsPerPage })
+})
+
+// --- Columnas ---
 const columns = [
   { name: 'photo', label: 'Foto', field: 'image', align: 'center' },
   {
@@ -349,8 +463,9 @@ const purchaseColumns = [
   { name: 'total', label: 'Subtotal', field: 'total', align: 'right' },
 ]
 
+// --- Funciones ---
 async function loadPage({ page, rowsPerPage }) {
-  await fetchUsers({ page, rowsPerPage })
+  await fetchUsers({ page, rowsPerPage, search: searchQuery.value })
   pagination.value.page = page
   pagination.value.rowsPerPage = rowsPerPage
   pagination.value.rowsNumber = total.value
@@ -387,7 +502,8 @@ function maskCardNumber(cardNumber) {
 }
 
 onMounted(() => {
-  loadPage(pagination.value)
+  // Carga inicial: tabla paginada (P1) + todos los usuarios para filtros/comparación (P7/P8)
+  Promise.all([loadPage(pagination.value), fetchAllUsers()])
 })
 </script>
 
@@ -395,6 +511,10 @@ onMounted(() => {
 .employees-card {
   border-radius: $app-card-radius;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.search-input {
+  width: 280px;
 }
 
 .employee-avatar {
